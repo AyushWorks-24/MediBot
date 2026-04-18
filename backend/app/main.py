@@ -46,6 +46,10 @@ async def startup():
     logger.info("Database tables created successfully")
     logger.info("MediBot API is ready")
 
+@app.get("/")
+async def root():
+    return {"message": "MediBot API is running", "docs": "/docs", "health": "/health"}    
+
 
 @app.get("/health", tags=["Health"])
 async def health():
