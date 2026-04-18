@@ -1,0 +1,17 @@
+fastapi
+uvicorn[standard]
+python-multipart
+requests
+pydantic
+pydantic-settings
+aiofiles
+sqlalchemy
+aiosqlite
+loguru
+httpx
+groq
+anthropic
+gtts
+ffmpeg-python
+pillow
+pymupdf
