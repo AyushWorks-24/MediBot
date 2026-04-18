@@ -15,3 +15,5 @@ gtts
 ffmpeg-python
 pillow
 pymupdf
+
+asyncpg
