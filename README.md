@@ -1,9 +1,9 @@
 # 🏥 MediBot — AI Medical Assistant
 
-> A multimodal medical AI chatbot that supports text, image analysis, and PDF report summarization — built for patients seeking quick, AI-powered medical insights.
+> A multimodal medical AI chatbot that supports text, voice, image analysis, and PDF report summarization — built for patients seeking quick, AI-powered medical insights.
 
 **🔴 Live Demo:** [https://medibot-ui.netlify.app](https://medibot-ui.netlify.app)  
-**🔗 Backend API:** [https://medibot-fizw.onrender.com](https://medibot-fizw.onrender.com)  
+**🔗 API:** [https://medibot-fizw.onrender.com](https://medibot-fizw.onrender.com)  
 **📄 API Docs:** [https://medibot-fizw.onrender.com/docs](https://medibot-fizw.onrender.com/docs)
 
 ---
@@ -11,6 +11,7 @@
 ## 🚀 Features
 
 - **Text Chat** — Ask medical questions and get AI-powered responses using LLaMA 3.3 70B via Groq
+- **Voice Input** — Speak your medical questions directly using your microphone (supported on Chrome and Chromium-based browsers)
 - **Image Analysis** — Upload medical images (X-rays, skin conditions, reports) and get AI-driven visual analysis
 - **PDF Summarization** — Upload medical reports/documents and get structured summaries with key findings highlighted
 - **Session Memory** — Full conversation history stored per session using SQLite
@@ -119,12 +120,26 @@ docker run -p 8000:8000 --env-file .env medibot
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
+| GET | `/` | API status |
 | GET | `/health` | Health check |
 | POST | `/chat/` | Send a text message |
 | GET | `/chat/history/{session_id}` | Get session history |
 | POST | `/chat/new-session` | Create new session |
 | POST | `/upload/image` | Upload and analyze image |
 | POST | `/upload/pdf` | Upload and summarize PDF |
+
+---
+
+## 🌐 Browser Compatibility
+
+| Feature | Chrome | Firefox | Brave | Safari |
+|---------|--------|---------|-------|--------|
+| Text Chat | ✅ | ✅ | ✅ | ✅ |
+| Image Upload | ✅ | ✅ | ✅ | ✅ |
+| PDF Upload | ✅ | ✅ | ✅ | ✅ |
+| Voice Input | ✅ | ❌ | ❌ | ❌ |
+
+> Voice input uses the browser's Web Speech API which routes through Google's speech recognition servers. Brave and Firefox block this by default.
 
 ---
 
