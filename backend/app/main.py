@@ -7,7 +7,12 @@ from backend.app.db.database import init_db
 from backend.app.routes.chat import router as chat_router
 from backend.app.routes.voice import router as voice_router
 from backend.app.routes.upload import router as upload_router
+from backend.app.routes.auth import router as auth_router
 from utils.logger import logger
+
+# Import all models so SQLAlchemy registers them before init_db runs
+import backend.app.db.models  # User model
+import backend.app.db.chat_history  # ChatSession, ChatMessage
 
 
 app = FastAPI(
@@ -34,6 +39,7 @@ app.mount(
 )
 
 
+app.include_router(auth_router)
 app.include_router(chat_router)
 app.include_router(voice_router)
 app.include_router(upload_router)
@@ -46,9 +52,10 @@ async def startup():
     logger.info("Database tables created successfully")
     logger.info("MediBot API is ready")
 
+
 @app.get("/")
 async def root():
-    return {"message": "MediBot API is running", "docs": "/docs", "health": "/health"}    
+    return {"message": "MediBot API is running", "docs": "/docs", "health": "/health"}
 
 
 @app.get("/health", tags=["Health"])
