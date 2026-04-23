@@ -36,6 +36,8 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
 .hchip.blue{background:var(--blue-light);color:var(--blue-dark);border-color:var(--blue-border)}
 .new-btn{padding:6px 14px;border:1px solid var(--border2);border-radius:9px;background:none;font-size:12px;color:var(--text2);cursor:pointer;font-family:inherit;font-weight:500;transition:all 0.15s}
 .new-btn:hover{background:var(--bg2)}
+.logout-btn{padding:6px 14px;border:1px solid var(--border2);border-radius:9px;background:none;font-size:12px;color:var(--danger);cursor:pointer;font-family:inherit;font-weight:500;transition:all 0.15s}
+.logout-btn:hover{background:var(--danger-light)}
 .body{flex:1;display:flex;overflow:hidden}
 .sidebar{width:64px;background:var(--bg);border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:18px 0;gap:6px;flex-shrink:0}
 .sbtn{width:40px;height:40px;border-radius:11px;border:none;background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;transition:all 0.15s;position:relative}
@@ -44,7 +46,7 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
 .sbtn .tooltip{position:absolute;left:52px;background:var(--text);color:#fff;font-size:11px;padding:4px 9px;border-radius:6px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity 0.15s;font-family:inherit;font-weight:500;z-index:100}
 .sbtn:hover .tooltip{opacity:1}
 .ssp{flex:1}
-.user-av{width:36px;height:36px;border-radius:11px;background:var(--blue-darker);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;cursor:pointer}
+.user-av{width:36px;height:36px;border-radius:11px;background:var(--blue-darker);display:flex;align-items:center;justify-content:justify-content;justify-content:center;font-size:11px;font-weight:700;color:#fff;cursor:pointer}
 .main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
 .chat-topbar{padding:12px 24px;background:var(--white);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
 .ctb-left{display:flex;flex-direction:column;gap:3px}
@@ -166,9 +168,54 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
 .disc-text{font-size:11.5px;color:#9a3412;line-height:1.6}
 .toast{position:fixed;bottom:24px;right:24px;background:#1e293b;color:#fff;padding:12px 18px;border-radius:10px;font-size:13px;font-weight:500;opacity:0;transform:translateY(8px);transition:all 0.25s;pointer-events:none;z-index:999;max-width:320px}
 .toast.show{opacity:1;transform:translateY(0)}
+
+/* ── AUTH MODAL ── */
+.auth-overlay{position:fixed;inset:0;background:rgba(15,23,42,0.6);display:flex;align-items:center;justify-content:center;z-index:1000;backdrop-filter:blur(4px)}
+.auth-modal{background:var(--white);border-radius:20px;padding:36px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,0.2)}
+.auth-logo{display:flex;align-items:center;gap:10px;margin-bottom:24px;justify-content:center}
+.auth-title{font-size:20px;font-weight:700;color:var(--text);text-align:center;margin-bottom:6px}
+.auth-sub{font-size:13px;color:var(--text3);text-align:center;margin-bottom:24px}
+.auth-tabs{display:flex;gap:0;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:24px}
+.auth-tab{flex:1;padding:9px;text-align:center;font-size:13px;font-weight:500;cursor:pointer;background:none;border:none;font-family:inherit;color:var(--text3);transition:all 0.15s}
+.auth-tab.active{background:var(--blue);color:#fff}
+.auth-field{margin-bottom:14px}
+.auth-field label{display:block;font-size:12px;font-weight:500;color:var(--text2);margin-bottom:5px}
+.auth-field input{width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:13.5px;color:var(--text);background:var(--bg);outline:none;font-family:inherit;transition:all 0.2s}
+.auth-field input:focus{border-color:var(--blue-mid);background:var(--white)}
+.auth-submit{width:100%;padding:12px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;transition:all 0.15s;margin-top:4px}
+.auth-submit:hover{background:var(--blue-dark)}
+.auth-submit:disabled{background:var(--bg3);color:var(--text4);cursor:not-allowed}
+.auth-error{font-size:12px;color:var(--danger);margin-top:10px;text-align:center;min-height:18px}
 </style>
 </head>
 <body>
+
+<!-- ── AUTH MODAL ── -->
+<div class="auth-overlay" id="auth-overlay">
+  <div class="auth-modal">
+    <div class="auth-logo">
+      <div class="logo-mark"><svg viewBox="0 0 24 24"><path d="M12 2v20M2 12h20"/></svg></div>
+      <div class="logo-text">Medi<span>Bot</span></div>
+    </div>
+    <div class="auth-title">Welcome to MediBot</div>
+    <div class="auth-sub">Sign in to your account or create a new one</div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tab-login" onclick="switchTab('login')">Sign In</button>
+      <button class="auth-tab" id="tab-register" onclick="switchTab('register')">Register</button>
+    </div>
+    <div class="auth-field">
+      <label>Email</label>
+      <input type="email" id="auth-email" placeholder="you@example.com"/>
+    </div>
+    <div class="auth-field">
+      <label>Password</label>
+      <input type="password" id="auth-password" placeholder="Your password" onkeydown="if(event.key==='Enter')submitAuth()"/>
+    </div>
+    <button class="auth-submit" id="auth-submit" onclick="submitAuth()">Sign In</button>
+    <div class="auth-error" id="auth-error"></div>
+  </div>
+</div>
+
 <div class="shell">
   <div class="header">
     <div class="logo-wrap">
@@ -181,6 +228,7 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
       <div class="live-badge" id="status-badge"><div class="live-dot"></div><span id="status-text">Connecting...</span></div>
       <div class="hchip blue">LLaMA 3.3 · Groq</div>
       <button class="new-btn" onclick="newSession()">+ New Session</button>
+      <button class="logout-btn" onclick="logout()">Logout</button>
     </div>
   </div>
 
@@ -192,7 +240,7 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
       <div class="sbtn" onclick="setMode('pdf')" id="sb-pdf">📄<div class="tooltip">PDF Report</div></div>
       <div class="sbtn" onclick="clearChat()">🗑️<div class="tooltip">Clear Chat</div></div>
       <div class="ssp"></div>
-      <div class="user-av">AK</div>
+      <div class="user-av" id="user-av">?</div>
     </div>
 
     <div class="main">
@@ -331,12 +379,14 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
 
 <script>
 const API='https://medibot-fizw.onrender.com';
-let sessionId=generateUUID();
+let sessionId=null;
+let authToken=localStorage.getItem('medibot_token')||null;
 let messageCount=0;
 let currentMode='text';
 let isLoading=false;
 let selectedImageFile=null;
 let selectedPDFFile=null;
+let currentTab='login';
 
 // ── Voice state ──
 let recognition=null;
@@ -344,20 +394,98 @@ let isListening=false;
 let finalTranscript='';
 let interimTranscript='';
 
-window.onload=()=>{
-  document.getElementById('session-display').textContent=sessionId.slice(0,8)+'...';
-  checkBackend();
-  setInterval(checkBackend,30000);
+// ── AUTH HELPERS ──
+function authHeaders(){
+  return{
+    'Content-Type':'application/json',
+    'Authorization':`Bearer ${authToken}`
+  };
+}
+
+function switchTab(tab){
+  currentTab=tab;
+  document.getElementById('tab-login').classList.toggle('active',tab==='login');
+  document.getElementById('tab-register').classList.toggle('active',tab==='register');
+  document.getElementById('auth-submit').textContent=tab==='login'?'Sign In':'Create Account';
+  document.getElementById('auth-error').textContent='';
+}
+
+async function submitAuth(){
+  const email=document.getElementById('auth-email').value.trim();
+  const password=document.getElementById('auth-password').value;
+  const errEl=document.getElementById('auth-error');
+  const btn=document.getElementById('auth-submit');
+  if(!email||!password){errEl.textContent='Email and password are required.';return}
+  btn.disabled=true;btn.textContent='Please wait...';errEl.textContent='';
+  try{
+    const endpoint=currentTab==='login'?'/auth/login':'/auth/register';
+    const r=await fetch(`${API}${endpoint}`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({email,password})
+    });
+    const data=await r.json();
+    if(!r.ok){errEl.textContent=data.detail||'Something went wrong.';return}
+    authToken=data.access_token;
+    localStorage.setItem('medibot_token',authToken);
+    // Set user avatar initials
+    document.getElementById('user-av').textContent=email.slice(0,2).toUpperCase();
+    document.getElementById('auth-overlay').style.display='none';
+    await initSession();
+  }catch(e){
+    errEl.textContent='Could not connect to server. Try again.';
+  }finally{
+    btn.disabled=false;
+    btn.textContent=currentTab==='login'?'Sign In':'Create Account';
+  }
+}
+
+function logout(){
+  localStorage.removeItem('medibot_token');
+  authToken=null;
+  sessionId=null;
+  document.getElementById('auth-overlay').style.display='flex';
+  document.getElementById('auth-email').value='';
+  document.getElementById('auth-password').value='';
+  document.getElementById('auth-error').textContent='';
+  clearChat();
+}
+
+// ── SESSION ──
+async function initSession(){
+  try{
+    const r=await fetch(`${API}/chat/new-session`,{
+      method:'POST',
+      headers:authHeaders()
+    });
+    if(r.status===401){logout();return}
+    const data=await r.json();
+    sessionId=data.session_id;
+    document.getElementById('session-display').textContent=sessionId.slice(0,8)+'...';
+  }catch(e){
+    showToast('Could not create session. Check connection.');
+  }
+}
+
+window.onload=async()=>{
   const ta=document.getElementById('text-input');
   ta.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendText()}});
   ta.addEventListener('input',()=>{ta.style.height='auto';ta.style.height=Math.min(ta.scrollHeight,120)+'px'});
+  checkBackend();
+  setInterval(checkBackend,30000);
+
+  // Auto-login if token exists
+  if(authToken){
+    document.getElementById('auth-overlay').style.display='none';
+    await initSession();
+  }
 };
 
 async function checkBackend(){
   try{
-    const r=await fetch('https://medibot-fizw.onrender.com/health');
+    const r=await fetch(`${API}/health`);
     if(r.ok)setOnline(true);
-  }catch(e){console.error('Backend check failed:',e)}
+  }catch(e){setOnline(false)}
 }
 
 function setOnline(online){
@@ -367,21 +495,23 @@ function setOnline(online){
   text.textContent=online?'Backend Live':'Backend Offline';
 }
 
-function generateUUID(){
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{
-    const r=Math.random()*16|0;
-    return(c==='x'?r:(r&0x3|0x8)).toString(16);
-  });
-}
-
-function newSession(){
-  sessionId=generateUUID();
-  document.getElementById('session-display').textContent=sessionId.slice(0,8)+'...';
-  messageCount=0;
-  document.getElementById('stat-messages').textContent='0';
-  document.getElementById('stat-time').textContent='—';
-  clearChat();
-  showToast('New session started');
+async function newSession(){
+  if(!authToken)return;
+  try{
+    const r=await fetch(`${API}/chat/new-session`,{
+      method:'POST',
+      headers:authHeaders()
+    });
+    if(r.status===401){logout();return}
+    const data=await r.json();
+    sessionId=data.session_id;
+    document.getElementById('session-display').textContent=sessionId.slice(0,8)+'...';
+    messageCount=0;
+    document.getElementById('stat-messages').textContent='0';
+    document.getElementById('stat-time').textContent='—';
+    clearChat();
+    showToast('New session started');
+  }catch(e){showToast('Could not create session')}
 }
 
 function clearChat(){
@@ -412,10 +542,7 @@ function setMode(mode){
   document.getElementById('mode-chip').textContent=titles[mode][2];
 }
 
-function removeWelcome(){
-  const w=document.getElementById('welcome-screen');
-  if(w)w.remove();
-}
+function removeWelcome(){const w=document.getElementById('welcome-screen');if(w)w.remove()}
 
 function addMessage(role,content,type='text',audioUrl=null){
   removeWelcome();
@@ -425,7 +552,7 @@ function addMessage(role,content,type='text',audioUrl=null){
   const badgeLabels={text:'Text',voice:'Voice',image:'Image',pdf:'PDF'};
   const div=document.createElement('div');
   div.className=`msg ${role}`;
-  const avText=role==='user'?'AK':'MB';
+  const avText=role==='user'?document.getElementById('user-av').textContent:'MB';
   const avClass=role==='user'?'usr':'bot';
   const bubClass=role==='user'?'usr':'bot';
   let audioHTML=audioUrl?`<audio class="audio-player" controls src="${API}/audio/${audioUrl.split('/').pop()}"></audio>`:'';
@@ -457,11 +584,11 @@ function hideTyping(){const t=document.getElementById('typing-indicator');if(t)t
 function updateTime(ms){document.getElementById('stat-time').textContent=(ms/1000).toFixed(1)+'s'}
 function quickAsk(text){setMode('text');document.getElementById('text-input').value=text;sendText()}
 
-// ── TEXT ──────────────────────────────────────
+// ── TEXT ──
 async function sendText(){
   const input=document.getElementById('text-input');
   const text=input.value.trim();
-  if(!text||isLoading)return;
+  if(!text||isLoading||!authToken)return;
   input.value='';input.style.height='auto';
   isLoading=true;document.getElementById('text-send').disabled=true;
   addMessage('user',text,'text');showTyping();
@@ -469,20 +596,20 @@ async function sendText(){
   try{
     const response=await fetch(`${API}/chat/stream`,{
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:authHeaders(),
       body:JSON.stringify({session_id:sessionId,message:text,input_type:'text'})
     });
+    if(response.status===401){logout();return}
     hideTyping();
-    // Create bot message div manually for streaming
     removeWelcome();
     const area=document.getElementById('chat-area');
     const now=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
     const div=document.createElement('div');
     div.className='msg bot';
-   const bubbleId='stream-bubble-'+Date.now();
-   div.innerHTML=`<div class="av bot">MB</div><div class="bwrap"><div class="bubble bot" id="${bubbleId}"></div><div class="bmeta"><span class="btime">${now}</span><span class="bbadge bb-text">Text</span></div></div>`;
-  area.appendChild(div);
-const contentEl=document.getElementById(bubbleId);
+    const bubbleId='stream-bubble-'+Date.now();
+    div.innerHTML=`<div class="av bot">MB</div><div class="bwrap"><div class="bubble bot" id="${bubbleId}"></div><div class="bmeta"><span class="btime">${now}</span><span class="bbadge bb-text">Text</span></div></div>`;
+    area.appendChild(div);
+    const contentEl=document.getElementById(bubbleId);
     let fullText='';
     const reader=response.body.getReader();
     const decoder=new TextDecoder();
@@ -495,11 +622,7 @@ const contentEl=document.getElementById(bubbleId);
         if(line.startsWith('data: ')){
           try{
             const parsed=JSON.parse(line.slice(6));
-            if(parsed.token){
-              fullText+=parsed.token;
-              contentEl.innerHTML=formatMessage(fullText);
-              area.scrollTop=area.scrollHeight;
-            }
+            if(parsed.token){fullText+=parsed.token;contentEl.innerHTML=formatMessage(fullText);area.scrollTop=area.scrollHeight}
           }catch{}
         }
       }
@@ -509,34 +632,17 @@ const contentEl=document.getElementById(bubbleId);
   finally{isLoading=false;document.getElementById('text-send').disabled=false;document.getElementById('text-input').focus()}
 }
 
-// ── VOICE ─────────────────────────────────────
-function toggleRecording(){
-  if(isListening){
-    stopRecording();
-  }else{
-    startRecording();
-  }
-}
+// ── VOICE ──
+function toggleRecording(){if(isListening){stopRecording()}else{startRecording()}}
 
 function startRecording(){
   const btn=document.getElementById('voice-record-btn');
   if(btn.disabled||isListening)return;
-
-  if(!('webkitSpeechRecognition' in window)&&!('SpeechRecognition' in window)){
-    showToast('Speech recognition not supported. Please use Chrome or Edge.');
-    return;
-  }
-
+  if(!('webkitSpeechRecognition' in window)&&!('SpeechRecognition' in window)){showToast('Speech recognition not supported. Please use Chrome or Edge.');return}
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   recognition=new SR();
-  finalTranscript='';
-  interimTranscript='';
-
-  recognition.lang='en-US';
-  recognition.continuous=false;
-  recognition.interimResults=true;
-  recognition.maxAlternatives=1;
-
+  finalTranscript='';interimTranscript='';
+  recognition.lang='en-US';recognition.continuous=false;recognition.interimResults=true;recognition.maxAlternatives=1;
   isListening=true;
   document.getElementById('voice-idle').style.display='none';
   document.getElementById('voice-recording').style.display='flex';
@@ -545,95 +651,60 @@ function startRecording(){
   btn.classList.add('recording');
   document.getElementById('voice-btn-icon').textContent='⏹';
   document.getElementById('voice-btn-text').textContent='Click to Stop';
-
   recognition.onresult=(event)=>{
     let interim='';
     for(let i=event.resultIndex;i<event.results.length;i++){
       const t=event.results[i][0].transcript;
-      if(event.results[i].isFinal){
-        finalTranscript+=t+' ';
-      }else{
-        interim+=t;
-      }
+      if(event.results[i].isFinal){finalTranscript+=t+' '}else{interim+=t}
     }
     interimTranscript=interim;
-    document.getElementById('voice-live-text').textContent=
-      (finalTranscript+interim).trim()||'Speak now...';
+    document.getElementById('voice-live-text').textContent=(finalTranscript+interim).trim()||'Speak now...';
   };
-
   recognition.onerror=(event)=>{
-    if(event.error==='no-speech'){
-      showToast('No speech detected. Please try again.');
-    }else if(event.error==='not-allowed'){
-      showToast('Microphone access denied. Please allow mic in browser settings.');
-    }else{
-      showToast('Mic error: '+event.error+'. Try again.');
-    }
-    isListening=false;
-    resetVoiceUI();
+    if(event.error==='no-speech'){showToast('No speech detected. Please try again.')}
+    else if(event.error==='not-allowed'){showToast('Microphone access denied.')}
+    else{showToast('Mic error: '+event.error)}
+    isListening=false;resetVoiceUI();
   };
-
   recognition.onend=()=>{
     if(isListening){
       isListening=false;
       const transcript=(finalTranscript+interimTranscript).trim();
-      if(transcript){
-        sendVoiceText(transcript);
-      }else{
-        showToast('No speech captured. Please try again.');
-        resetVoiceUI();
-      }
+      if(transcript){sendVoiceText(transcript)}else{showToast('No speech captured.');resetVoiceUI()}
     }
   };
-
   recognition.start();
 }
 
 function stopRecording(){
   if(!recognition||!isListening)return;
-  isListening=false;
-  recognition.stop();
+  isListening=false;recognition.stop();
   document.getElementById('voice-recording').style.display='none';
   document.getElementById('voice-processing').style.display='flex';
   const btn=document.getElementById('voice-record-btn');
-  btn.classList.remove('recording');
-  btn.disabled=true;
+  btn.classList.remove('recording');btn.disabled=true;
   document.getElementById('voice-btn-icon').textContent='⏳';
   document.getElementById('voice-btn-text').textContent='Processing...';
 }
 
 async function sendVoiceText(transcript){
-  if(!transcript){
-    showToast('No speech detected. Please try again.');
-    resetVoiceUI();
-    return;
-  }
-
+  if(!transcript){showToast('No speech detected.');resetVoiceUI();return}
   isLoading=true;
-  addMessage('user','🎙️ '+transcript,'voice');
-  showTyping();
+  addMessage('user','🎙️ '+transcript,'voice');showTyping();
   const start=Date.now();
-
   try{
     const r=await fetch(`${API}/chat/`,{
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:authHeaders(),
       body:JSON.stringify({session_id:sessionId,message:transcript,input_type:'voice'}),
     });
+    if(r.status===401){logout();return}
     const data=await r.json();
-    hideTyping();
-    updateTime(Date.now()-start);
+    hideTyping();updateTime(Date.now()-start);
     if(data.reply)addMessage('bot',data.reply,'voice');
     else throw new Error(data.detail||'No reply received');
-  }catch(e){
-    hideTyping();
-    showToast('Error: '+e.message);
-  }finally{
-    isLoading=false;
-    finalTranscript='';
-    interimTranscript='';
-    resetVoiceUI();
-  }
+  }catch(e){hideTyping();showToast('Error: '+e.message)}
+  finally{isLoading=false;finalTranscript='';interimTranscript='';resetVoiceUI()}
 }
 
 function resetVoiceUI(){
@@ -642,13 +713,12 @@ function resetVoiceUI(){
   document.getElementById('voice-recording').style.display='none';
   document.getElementById('voice-processing').style.display='none';
   const btn=document.getElementById('voice-record-btn');
-  btn.classList.remove('recording');
-  btn.disabled=false;
+  btn.classList.remove('recording');btn.disabled=false;
   document.getElementById('voice-btn-icon').textContent='🎙️';
   document.getElementById('voice-btn-text').textContent='Click to Record';
 }
 
-// ── IMAGE ─────────────────────────────────────
+// ── IMAGE ──
 async function sendImage(){
   if(!selectedImageFile){showToast('Please select an image first');return}
   if(isLoading)return;
@@ -659,7 +729,12 @@ async function sendImage(){
   try{
     const form=new FormData();
     form.append('session_id',sessionId);form.append('question',question);form.append('image',selectedImageFile);
-    const r=await fetch(`${API}/upload/image`,{method:'POST',body:form});
+    const r=await fetch(`${API}/upload/image`,{
+      method:'POST',
+      headers:{'Authorization':`Bearer ${authToken}`},
+      body:form
+    });
+    if(r.status===401){logout();return}
     const data=await r.json();
     hideTyping();updateTime(Date.now()-start);
     if(data.reply)addMessage('bot',data.reply,'image');
@@ -673,7 +748,7 @@ async function sendImage(){
   }
 }
 
-// ── PDF ───────────────────────────────────────
+// ── PDF ──
 async function sendPDF(){
   if(!selectedPDFFile){showToast('Please select a PDF file first');return}
   if(isLoading)return;
@@ -684,7 +759,12 @@ async function sendPDF(){
   try{
     const form=new FormData();
     form.append('session_id',sessionId);form.append('question',question);form.append('pdf',selectedPDFFile);
-    const r=await fetch(`${API}/upload/pdf`,{method:'POST',body:form});
+    const r=await fetch(`${API}/upload/pdf`,{
+      method:'POST',
+      headers:{'Authorization':`Bearer ${authToken}`},
+      body:form
+    });
+    if(r.status===401){logout();return}
     const data=await r.json();
     hideTyping();updateTime(Date.now()-start);
     if(data.reply)addMessage('bot',data.reply,'pdf');
@@ -698,7 +778,7 @@ async function sendPDF(){
   }
 }
 
-// ── FILE HELPERS ──────────────────────────────
+// ── FILE HELPERS ──
 function fileSelected(input,type){
   const file=input.files[0];if(!file)return;
   if(type==='image'){
@@ -715,17 +795,8 @@ function fileSelected(input,type){
 }
 
 function clearFile(type){
-  if(type==='image'){
-    selectedImageFile=null;
-    document.getElementById('image-file').value='';
-    document.getElementById('image-file-row').style.display='none';
-    document.getElementById('image-file-row').innerHTML='';
-  }else{
-    selectedPDFFile=null;
-    document.getElementById('pdf-file').value='';
-    document.getElementById('pdf-file-row').style.display='none';
-    document.getElementById('pdf-file-row').innerHTML='';
-  }
+  if(type==='image'){selectedImageFile=null;document.getElementById('image-file').value='';document.getElementById('image-file-row').style.display='none';document.getElementById('image-file-row').innerHTML=''}
+  else{selectedPDFFile=null;document.getElementById('pdf-file').value='';document.getElementById('pdf-file-row').style.display='none';document.getElementById('pdf-file-row').innerHTML=''}
 }
 
 function dragOver(e,zoneId){e.preventDefault();document.getElementById(zoneId).classList.add('drag')}
