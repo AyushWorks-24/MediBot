@@ -30,8 +30,10 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
 .hright{display:flex;align-items:center;gap:10px}
 .live-badge{display:flex;align-items:center;gap:6px;padding:5px 13px;background:var(--success-light);border-radius:20px;font-size:11.5px;font-weight:500;color:var(--success);border:1px solid var(--success-border)}
 .live-badge.offline{background:var(--danger-light);color:var(--danger);border-color:#fecaca}
+.live-badge.connecting{background:var(--warning-light);color:var(--warning);border-color:#fde68a}
 .live-dot{width:6px;height:6px;border-radius:50%;background:var(--success)}
 .live-badge.offline .live-dot{background:var(--danger)}
+.live-badge.connecting .live-dot{background:var(--warning)}
 .hchip{font-size:11.5px;padding:5px 13px;border-radius:20px;background:var(--bg2);color:var(--text3);border:1px solid var(--border);font-weight:500}
 .hchip.blue{background:var(--blue-light);color:var(--blue-dark);border-color:var(--blue-border)}
 .new-btn{padding:6px 14px;border:1px solid var(--border2);border-radius:9px;background:none;font-size:12px;color:var(--text2);cursor:pointer;font-family:inherit;font-weight:500;transition:all 0.15s}
@@ -46,7 +48,7 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
 .sbtn .tooltip{position:absolute;left:52px;background:var(--text);color:#fff;font-size:11px;padding:4px 9px;border-radius:6px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity 0.15s;font-family:inherit;font-weight:500;z-index:100}
 .sbtn:hover .tooltip{opacity:1}
 .ssp{flex:1}
-.user-av{width:36px;height:36px;border-radius:11px;background:var(--blue-darker);display:flex;align-items:center;justify-content:justify-content;justify-content:center;font-size:11px;font-weight:700;color:#fff;cursor:pointer}
+.user-av{width:36px;height:36px;border-radius:11px;background:var(--blue-darker);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;cursor:pointer}
 .main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
 .chat-topbar{padding:12px 24px;background:var(--white);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
 .ctb-left{display:flex;flex-direction:column;gap:3px}
@@ -225,7 +227,7 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
       <div class="hsubtitle">AI Medical Assistant</div>
     </div>
     <div class="hright">
-      <div class="live-badge" id="status-badge"><div class="live-dot"></div><span id="status-text">Connecting...</span></div>
+      <div class="live-badge connecting" id="status-badge"><div class="live-dot"></div><span id="status-text">Connecting...</span></div>
       <div class="hchip blue">LLaMA 3.3 · Groq</div>
       <button class="new-btn" onclick="newSession()">+ New Session</button>
       <button class="logout-btn" onclick="logout()">Logout</button>
@@ -428,7 +430,6 @@ async function submitAuth(){
     if(!r.ok){errEl.textContent=data.detail||'Something went wrong.';return}
     authToken=data.access_token;
     localStorage.setItem('medibot_token',authToken);
-    // Set user avatar initials
     document.getElementById('user-av').textContent=email.slice(0,2).toUpperCase();
     document.getElementById('auth-overlay').style.display='none';
     await initSession();
@@ -452,18 +453,28 @@ function logout(){
 }
 
 // ── SESSION ──
-async function initSession(){
-  try{
-    const r=await fetch(`${API}/chat/new-session`,{
-      method:'POST',
-      headers:authHeaders()
-    });
-    if(r.status===401){logout();return}
-    const data=await r.json();
-    sessionId=data.session_id;
-    document.getElementById('session-display').textContent=sessionId.slice(0,8)+'...';
-  }catch(e){
-    showToast('Could not create session. Check connection.');
+// Retries up to maxRetries times with a delay between attempts.
+// This handles Render cold starts where the backend takes a few seconds to wake up.
+async function initSession(retries=4, delayMs=3000){
+  for(let attempt=1; attempt<=retries; attempt++){
+    try{
+      const r=await fetch(`${API}/chat/new-session`,{
+        method:'POST',
+        headers:authHeaders()
+      });
+      if(r.status===401){logout();return}
+      if(!r.ok) throw new Error(`HTTP ${r.status}`);
+      const data=await r.json();
+      sessionId=data.session_id;
+      document.getElementById('session-display').textContent=sessionId.slice(0,8)+'...';
+      return; // success — exit
+    }catch(e){
+      if(attempt===retries){
+        showToast('Could not create session after '+retries+' attempts. Refresh the page.');
+      } else {
+        await new Promise(res=>setTimeout(res, delayMs));
+      }
+    }
   }
 }
 
@@ -471,12 +482,19 @@ window.onload=async()=>{
   const ta=document.getElementById('text-input');
   ta.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendText()}});
   ta.addEventListener('input',()=>{ta.style.height='auto';ta.style.height=Math.min(ta.scrollHeight,120)+'px'});
-  checkBackend();
-  setInterval(checkBackend,30000);
 
-  // Auto-login if token exists
+  // FIX 1: Show "Connecting..." state on badge while waiting
+  setConnecting();
+
+  // FIX 2: Initial check + retry after 5s to handle Render cold start
+  checkBackend();
+  setTimeout(checkBackend, 5000);
+  setTimeout(checkBackend, 12000); // one more safety net at 12s
+  setInterval(checkBackend, 30000);
+
   if(authToken){
     document.getElementById('auth-overlay').style.display='none';
+    // FIX 3: initSession now retries automatically if backend is still waking up
     await initSession();
   }
 };
@@ -484,8 +502,16 @@ window.onload=async()=>{
 async function checkBackend(){
   try{
     const r=await fetch(`${API}/health`);
-    if(r.ok)setOnline(true);
+    if(r.ok) setOnline(true);
+    else setOnline(false);
   }catch(e){setOnline(false)}
+}
+
+function setConnecting(){
+  const badge=document.getElementById('status-badge');
+  const text=document.getElementById('status-text');
+  badge.className='live-badge connecting';
+  text.textContent='Connecting...';
 }
 
 function setOnline(online){
@@ -589,6 +615,7 @@ async function sendText(){
   const input=document.getElementById('text-input');
   const text=input.value.trim();
   if(!text||isLoading||!authToken)return;
+  if(!sessionId){showToast('Session not ready yet. Please wait a moment.');return}
   input.value='';input.style.height='auto';
   isLoading=true;document.getElementById('text-send').disabled=true;
   addMessage('user',text,'text');showTyping();
@@ -689,6 +716,7 @@ function stopRecording(){
 
 async function sendVoiceText(transcript){
   if(!transcript){showToast('No speech detected.');resetVoiceUI();return}
+  if(!sessionId){showToast('Session not ready yet. Please wait a moment.');resetVoiceUI();return}
   isLoading=true;
   addMessage('user','🎙️ '+transcript,'voice');showTyping();
   const start=Date.now();
@@ -722,6 +750,7 @@ function resetVoiceUI(){
 async function sendImage(){
   if(!selectedImageFile){showToast('Please select an image first');return}
   if(isLoading)return;
+  if(!sessionId){showToast('Session not ready yet. Please wait a moment.');return}
   isLoading=true;document.getElementById('image-send').disabled=true;
   const question=document.getElementById('image-question').value||'Analyze this medical image.';
   addMessage('user','🖼️ Image: '+selectedImageFile.name+'\n'+question,'image');showTyping();
@@ -752,6 +781,7 @@ async function sendImage(){
 async function sendPDF(){
   if(!selectedPDFFile){showToast('Please select a PDF file first');return}
   if(isLoading)return;
+  if(!sessionId){showToast('Session not ready yet. Please wait a moment.');return}
   isLoading=true;document.getElementById('pdf-send').disabled=true;
   const question=document.getElementById('pdf-question').value||'Summarize this medical report.';
   addMessage('user','📄 Report: '+selectedPDFFile.name+'\n'+question,'pdf');showTyping();
