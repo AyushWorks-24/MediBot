@@ -5,7 +5,7 @@ import json
 import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, func
 
 from backend.app.db.database import get_db
 from backend.app.db.chat_history import ChatMessage, ChatSession
@@ -53,6 +53,57 @@ async def chat(
 
     logger.info(f"[{req.session_id[:8]}] Chat turn saved to DB")
     return ChatResponse(session_id=req.session_id, reply=reply)
+
+
+@router.get("/sessions")
+async def list_sessions(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Returns all sessions belonging to the current user, most recent first.
+    Each session includes an auto-generated title (from the first user message),
+    a created_at timestamp, and a message count.
+    """
+    result = await db.execute(
+        select(ChatSession)
+        .where(ChatSession.user_id == current_user.id)
+        .order_by(ChatSession.created_at.desc())
+    )
+    sessions = result.scalars().all()
+
+    output = []
+    for s in sessions:
+        first_msg_result = await db.execute(
+            select(ChatMessage)
+            .where(ChatMessage.session_id == s.id, ChatMessage.role == "user")
+            .order_by(ChatMessage.id)
+            .limit(1)
+        )
+        first_msg = first_msg_result.scalar_one_or_none()
+
+        count_result = await db.execute(
+            select(func.count())
+            .select_from(ChatMessage)
+            .where(ChatMessage.session_id == s.id)
+        )
+        msg_count = count_result.scalar()
+
+        if first_msg:
+            title = first_msg.content.strip()
+            if len(title) > 50:
+                title = title[:50].rsplit(" ", 1)[0] + "..."
+        else:
+            title = "New Conversation"
+
+        output.append({
+            "session_id": s.id,
+            "title": title,
+            "created_at": s.created_at.isoformat() if s.created_at else None,
+            "message_count": msg_count,
+        })
+
+    return output
 
 
 @router.get("/history/{session_id}")

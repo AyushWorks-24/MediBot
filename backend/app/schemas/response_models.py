@@ -4,7 +4,7 @@ from typing import Optional
 class ChatResponse(BaseModel):
     session_id:str
     reply:str
-    input_tpyes:str="text"
+    input_type:str="text"
     audio_url:Optional[str]=None
 
 class ErrorResponse(BaseModel) :

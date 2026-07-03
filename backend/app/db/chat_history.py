@@ -16,7 +16,7 @@ class ChatSession(Base):
 
 
 class ChatMessage(Base):
-    __tablename__ = "chat_messages"  # fixed: was "chat messages" with a space
+    __tablename__ = "chat_messages"  
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     session_id = Column(String, ForeignKey("chat_sessions.id"), nullable=False, index=True)  # fixed: added FK

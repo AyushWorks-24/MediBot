@@ -2,7 +2,6 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-
 from backend.app.db.database import init_db
 from backend.app.routes.chat import router as chat_router
 from backend.app.routes.voice import router as voice_router
@@ -10,7 +9,7 @@ from backend.app.routes.upload import router as upload_router
 from backend.app.routes.auth import router as auth_router
 from utils.logger import logger
 
-# Import all models so SQLAlchemy registers them before init_db runs
+
 import backend.app.db.models  # User model
 import backend.app.db.chat_history  # ChatSession, ChatMessage
 

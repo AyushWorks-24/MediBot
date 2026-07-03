@@ -188,6 +188,20 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
 .auth-submit:hover{background:var(--blue-dark)}
 .auth-submit:disabled{background:var(--bg3);color:var(--text4);cursor:not-allowed}
 .auth-error{font-size:12px;color:var(--danger);margin-top:10px;text-align:center;min-height:18px}
+
+/* ── SESSION HISTORY PANEL ── */
+.history-panel{position:fixed;top:60px;left:64px;width:280px;height:calc(100vh - 60px);background:var(--white);border-right:1px solid var(--border);box-shadow:2px 0 20px rgba(0,0,0,0.08);transform:translateX(-100%);transition:transform 0.2s ease;z-index:200;display:flex;flex-direction:column}
+.history-panel.open{transform:translateX(0)}
+.history-header{padding:16px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.history-title{font-size:14px;font-weight:600;color:var(--text)}
+.history-close{background:none;border:none;font-size:16px;color:var(--text4);cursor:pointer;padding:2px}
+.history-list{flex:1;overflow-y:auto;padding:10px}
+.session-item{padding:10px 12px;border-radius:10px;cursor:pointer;margin-bottom:4px;transition:background 0.15s}
+.session-item:hover{background:var(--bg2)}
+.session-item.active{background:var(--blue-light)}
+.session-item-title{font-size:12.5px;font-weight:500;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.session-item-meta{font-size:10.5px;color:var(--text4);margin-top:3px}
+.session-empty{font-size:12.5px;color:var(--text4);padding:20px;text-align:center}
 </style>
 </head>
 <body>
@@ -218,6 +232,15 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
   </div>
 </div>
 
+<!-- ── SESSION HISTORY PANEL ── -->
+<div class="history-panel" id="history-panel">
+  <div class="history-header">
+    <div class="history-title">Session History</div>
+    <button class="history-close" onclick="closeHistoryPanel()">✕</button>
+  </div>
+  <div class="history-list" id="session-list"></div>
+</div>
+
 <div class="shell">
   <div class="header">
     <div class="logo-wrap">
@@ -240,6 +263,7 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
       <div class="sbtn" onclick="setMode('voice')" id="sb-voice">🎙️<div class="tooltip">Voice Query</div></div>
       <div class="sbtn" onclick="setMode('image')" id="sb-image">🖼️<div class="tooltip">Image Analysis</div></div>
       <div class="sbtn" onclick="setMode('pdf')" id="sb-pdf">📄<div class="tooltip">PDF Report</div></div>
+      <div class="sbtn" onclick="toggleHistoryPanel()" id="sb-history">📜<div class="tooltip">Session History</div></div>
       <div class="sbtn" onclick="clearChat()">🗑️<div class="tooltip">Clear Chat</div></div>
       <div class="ssp"></div>
       <div class="user-av" id="user-av">?</div>
@@ -380,7 +404,7 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
 <div class="toast" id="toast"></div>
 
 <script>
-const API='https://medibot-fizw.onrender.com';
+const API='http://localhost:8000';
 let sessionId=null;
 let authToken=localStorage.getItem('medibot_token')||null;
 let messageCount=0;
@@ -445,6 +469,7 @@ function logout(){
   localStorage.removeItem('medibot_token');
   authToken=null;
   sessionId=null;
+  closeHistoryPanel();
   document.getElementById('auth-overlay').style.display='flex';
   document.getElementById('auth-email').value='';
   document.getElementById('auth-password').value='';
@@ -453,11 +478,22 @@ function logout(){
 }
 
 // ── SESSION ──
-// Retries up to maxRetries times with a delay between attempts.
-// This handles Render cold starts where the backend takes a few seconds to wake up.
+// On login: check for existing sessions first. If found, resume the most
+// recent one instead of always creating a new blank session.
+// Retries up to maxRetries times with a delay between attempts to handle
+// Render cold starts where the backend takes a few seconds to wake up.
 async function initSession(retries=4, delayMs=3000){
   for(let attempt=1; attempt<=retries; attempt++){
     try{
+      const listRes = await fetch(`${API}/chat/sessions`, { headers: authHeaders() });
+      if(listRes.status===401){logout();return}
+      if(listRes.ok){
+        const sessions = await listRes.json();
+        if(sessions.length > 0){
+          await switchSession(sessions[0].session_id);
+          return;
+        }
+      }
       const r=await fetch(`${API}/chat/new-session`,{
         method:'POST',
         headers:authHeaders()
@@ -483,10 +519,10 @@ window.onload=async()=>{
   ta.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendText()}});
   ta.addEventListener('input',()=>{ta.style.height='auto';ta.style.height=Math.min(ta.scrollHeight,120)+'px'});
 
-  // FIX 1: Show "Connecting..." state on badge while waiting
+  // Show "Connecting..." state on badge while waiting
   setConnecting();
 
-  // FIX 2: Initial check + retry after 5s to handle Render cold start
+  // Initial check + retries to handle Render cold start
   checkBackend();
   setTimeout(checkBackend, 5000);
   setTimeout(checkBackend, 12000); // one more safety net at 12s
@@ -494,7 +530,7 @@ window.onload=async()=>{
 
   if(authToken){
     document.getElementById('auth-overlay').style.display='none';
-    // FIX 3: initSession now retries automatically if backend is still waking up
+    // initSession now resumes the last session, or creates one if none exist
     await initSession();
   }
 };
@@ -536,6 +572,7 @@ async function newSession(){
     document.getElementById('stat-messages').textContent='0';
     document.getElementById('stat-time').textContent='—';
     clearChat();
+    await loadSessions();
     showToast('New session started');
   }catch(e){showToast('Could not create session')}
 }
@@ -610,6 +647,90 @@ function hideTyping(){const t=document.getElementById('typing-indicator');if(t)t
 function updateTime(ms){document.getElementById('stat-time').textContent=(ms/1000).toFixed(1)+'s'}
 function quickAsk(text){setMode('text');document.getElementById('text-input').value=text;sendText()}
 
+// ── SESSION HISTORY ──
+async function loadSessions(){
+  if(!authToken)return;
+  try{
+    const r = await fetch(`${API}/chat/sessions`, { headers: authHeaders() });
+    if(r.status===401){logout();return}
+    if(!r.ok)throw new Error(`HTTP ${r.status}`);
+    const sessions = await r.json();
+    renderSessionList(sessions);
+  }catch(e){
+    showToast('Could not load session history');
+  }
+}
+
+function escapeHTML(str){
+  const d=document.createElement('div');
+  d.textContent=str;
+  return d.innerHTML;
+}
+
+function renderSessionList(sessions){
+  const list = document.getElementById('session-list');
+  list.innerHTML='';
+  if(sessions.length===0){
+    list.innerHTML='<div class="session-empty">No past sessions yet</div>';
+    return;
+  }
+  sessions.forEach(s=>{
+    const item=document.createElement('div');
+    item.className='session-item'+(s.session_id===sessionId?' active':'');
+    const date=s.created_at?new Date(s.created_at).toLocaleDateString([],{month:'short',day:'numeric'}):'';
+    item.innerHTML=`<div class="session-item-title">${escapeHTML(s.title)}</div><div class="session-item-meta">${date} · ${s.message_count} msgs</div>`;
+    item.onclick=()=>switchSession(s.session_id);
+    list.appendChild(item);
+  });
+}
+
+async function switchSession(id){
+  if(id===sessionId){closeHistoryPanel();return}
+  isLoading=true;
+  try{
+    const r=await fetch(`${API}/chat/history/${id}`,{headers:authHeaders()});
+    if(r.status===401){logout();return}
+    if(!r.ok){showToast('Could not load that session');return}
+    const messages=await r.json();
+    sessionId=id;
+    document.getElementById('session-display').textContent=id.slice(0,8)+'...';
+    document.getElementById('chat-area').innerHTML='';
+    messageCount=0;
+    if(messages.length===0){
+      clearChat();
+    }else{
+      messages.forEach(m=>{
+        if(m.role==='user')messageCount++;
+        addMessage(m.role==='user'?'user':'bot', m.content, m.type||'text');
+      });
+      document.getElementById('stat-messages').textContent=messageCount;
+    }
+    document.getElementById('stat-time').textContent='—';
+    await loadSessions();
+    closeHistoryPanel();
+  }catch(e){
+    showToast('Error switching session: '+e.message);
+  }finally{
+    isLoading=false;
+  }
+}
+
+function toggleHistoryPanel(){
+  const panel=document.getElementById('history-panel');
+  if(panel.classList.contains('open')){closeHistoryPanel()}
+  else{panel.classList.add('open');loadSessions()}
+}
+
+function closeHistoryPanel(){
+  document.getElementById('history-panel').classList.remove('open');
+}
+
+function refreshSessionListIfOpen(){
+  if(document.getElementById('history-panel').classList.contains('open')){
+    loadSessions();
+  }
+}
+
 // ── TEXT ──
 async function sendText(){
   const input=document.getElementById('text-input');
@@ -656,7 +777,10 @@ async function sendText(){
     }
     updateTime(Date.now()-start);
   }catch(e){hideTyping();showToast('Error: '+e.message)}
-  finally{isLoading=false;document.getElementById('text-send').disabled=false;document.getElementById('text-input').focus()}
+  finally{
+    isLoading=false;document.getElementById('text-send').disabled=false;document.getElementById('text-input').focus();
+    refreshSessionListIfOpen();
+  }
 }
 
 // ── VOICE ──
@@ -732,7 +856,10 @@ async function sendVoiceText(transcript){
     if(data.reply)addMessage('bot',data.reply,'voice');
     else throw new Error(data.detail||'No reply received');
   }catch(e){hideTyping();showToast('Error: '+e.message)}
-  finally{isLoading=false;finalTranscript='';interimTranscript='';resetVoiceUI()}
+  finally{
+    isLoading=false;finalTranscript='';interimTranscript='';resetVoiceUI();
+    refreshSessionListIfOpen();
+  }
 }
 
 function resetVoiceUI(){
@@ -774,6 +901,7 @@ async function sendImage(){
     selectedImageFile=null;
     document.getElementById('image-file-row').style.display='none';
     document.getElementById('image-file-row').innerHTML='';
+    refreshSessionListIfOpen();
   }
 }
 
@@ -805,6 +933,7 @@ async function sendPDF(){
     selectedPDFFile=null;
     document.getElementById('pdf-file-row').style.display='none';
     document.getElementById('pdf-file-row').innerHTML='';
+    refreshSessionListIfOpen();
   }
 }
 
