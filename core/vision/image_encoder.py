@@ -25,8 +25,9 @@ def resize_if_needed(
     img.save(buf,format="JPEG",quality=85)
     return buf.getvalue()
 
-def prepare_image(image_bytes:bytes)->str:
-    resized=resize_if_needed(image_bytes)
-    encoded=encode_image_to_base64(resized)
+def prepare_image(image_bytes:bytes)->str: 
+    resized=resize_if_needed(image_bytes) 
+    encoded=encode_image_to_base64(resized) 
     logger.debug(f"Image preoared - base64 length:{len(encoded)}")
+    return encoded
     
