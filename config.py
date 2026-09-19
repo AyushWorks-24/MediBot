@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     elevenlabs_api_key: str = ""
     tts_provider: str = "gtts"
 
-    groq_text_model: str = "llama-3.3-70b-versatile"
+    groq_text_model: str = "openai/gpt-oss-120b"
     groq_vision_model: str = "llava-v1.5-7b-4096-preview"
 
     app_env: str = "development"
