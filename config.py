@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     tts_provider: str = "gtts"
 
     groq_text_model: str = "openai/gpt-oss-120b"
-    groq_vision_model: str = "qwen/qwen3.6-27b"
+    groq_vision_model: str = "qwen/qwen3.8-27b"
 
     app_env: str = "development"
     secret_key: str = "change-this-in-production"
